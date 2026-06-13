@@ -95,6 +95,7 @@ class CryptoEngine {
         'file_hash': fileHash,
         'aes_key': base64Encode(generatedKey),
         'aes_iv': base64Encode(generatedIv),
+        'original_filename': baseName,
       };
     } on FileSystemException catch (e) {
       await apiClient.logError(destDir, 'IO Error on $baseName: $e');
