@@ -57,13 +57,13 @@ class _EncryptorScreenState extends State<EncryptorScreen> {
     setState(() {
       processing = true;
       progressValue = 0.0;
-      currentStatus = 'Scanning files...';
+      currentStatus = 'Scanning files recursively...';
     });
 
     _engine.reset();
 
     final directory = Directory(sourceDir!);
-    final entities = await directory.list().toList();
+    final entities = await directory.list(recursive: true).toList();
     final targetFiles = entities
         .whereType<File>()
         .where((f) => p.extension(f.path).toLowerCase() == '.mp4')
@@ -72,7 +72,8 @@ class _EncryptorScreenState extends State<EncryptorScreen> {
     if (targetFiles.isEmpty) {
       setState(() {
         processing = false;
-        currentStatus = 'No .mp4 files found in source directory.';
+        currentStatus =
+            'No .mp4 files found in source directory or its sub-folders.';
       });
       return;
     }
@@ -84,9 +85,15 @@ class _EncryptorScreenState extends State<EncryptorScreen> {
     for (int i = 0; i < targetFiles.length; i++) {
       if (_engine.cancelRequested) break;
 
+      final String relativePath = p.relative(
+        targetFiles[i].path,
+        from: sourceDir!,
+      );
+
       final resultMap = await _engine.processSingleFile(
         targetFile: targetFiles[i],
         destDir: destDir!,
+        relativePath: relativePath,
         onProgress: (prog, status) {
           setState(() {
             progressValue = prog;

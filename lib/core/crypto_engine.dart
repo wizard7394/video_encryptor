@@ -1,12 +1,12 @@
 import 'dart:io';
 import 'dart:convert';
 import 'dart:math';
+import 'dart:typed_data';
 import 'package:path/path.dart' as p;
 import 'package:crypto/crypto.dart';
 import 'package:uuid/uuid.dart';
 import 'package:video_encryptor/src/rust/api/simple.dart';
 import 'api_client.dart';
-import 'dart:typed_data';
 
 class CryptoEngine {
   final ApiClient apiClient = ApiClient();
@@ -24,10 +24,18 @@ class CryptoEngine {
   Future<Map<String, dynamic>?> processSingleFile({
     required File targetFile,
     required String destDir,
+    required String relativePath,
     required Function(double progress, String status) onProgress,
   }) async {
+    final relativeDir = p.dirname(relativePath);
     final baseName = p.basenameWithoutExtension(targetFile.path);
-    final outputPath = p.join(destDir, '$baseName.mp6');
+
+    final finalDestDir = Directory(p.join(destDir, relativeDir));
+    if (!await finalDestDir.exists()) {
+      await finalDestDir.create(recursive: true);
+    }
+
+    final outputPath = p.join(finalDestDir.path, '$baseName.mp6');
     final outputFile = File(outputPath);
 
     try {
@@ -95,7 +103,7 @@ class CryptoEngine {
         'file_hash': fileHash,
         'aes_key': base64Encode(generatedKey),
         'aes_iv': base64Encode(generatedIv),
-        'original_filename': baseName,
+        'original_filename': relativePath.replaceAll('\\', '/'),
       };
     } on FileSystemException catch (e) {
       await apiClient.logError(destDir, 'IO Error on $baseName: $e');
